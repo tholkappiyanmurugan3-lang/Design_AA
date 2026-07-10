@@ -1,6 +1,9 @@
+import streamlit as st
 import heapq
 
-# --- Union-Find for Kruskal ---
+# -------------------------------
+# Union Find for Kruskal
+# -------------------------------
 class UnionFind:
     def __init__(self, n):
         self.parent = list(range(n))
@@ -8,11 +11,12 @@ class UnionFind:
 
     def find(self, x):
         if self.parent[x] != x:
-            self.parent[x] = self.find(self.parent[x])  # Path compression
+            self.parent[x] = self.find(self.parent[x])
         return self.parent[x]
 
     def union(self, x, y):
-        rx, ry = self.find(x), self.find(y)
+        rx = self.find(x)
+        ry = self.find(y)
 
         if rx == ry:
             return False
@@ -28,16 +32,19 @@ class UnionFind:
         return True
 
 
+# -------------------------------
+# Kruskal Algorithm
+# -------------------------------
 def kruskal(n, edges):
-    """edges: list of (weight, u, v)"""
+    edges.sort()
 
-    edges.sort()  # O(E log E)
     uf = UnionFind(n)
 
     mst = []
     cost = 0
 
     for w, u, v in edges:
+
         if uf.union(u, v):
             mst.append((u, v, w))
             cost += w
@@ -48,34 +55,42 @@ def kruskal(n, edges):
     return mst, cost
 
 
-def prim(n, adj, start=0):
-    """adj: adjacency list {u: [(v, w), ...]}"""
+# -------------------------------
+# Prim Algorithm
+# -------------------------------
+def prim(n, adj):
 
-    INF = float('inf')
+    INF = float("inf")
+
     key = [INF] * n
     parent = [-1] * n
-    inMST = [False] * n
+    visited = [False] * n
 
-    key[start] = 0
-    pq = [(0, start)]
+    pq = []
+
+    key[0] = 0
+
+    heapq.heappush(pq, (0, 0))
 
     mst = []
     cost = 0
 
     while pq:
+
         w, u = heapq.heappop(pq)
 
-        if inMST[u]:
+        if visited[u]:
             continue
 
-        inMST[u] = True
+        visited[u] = True
 
         if parent[u] != -1:
             mst.append((parent[u], u, w))
             cost += w
 
-        for v, wt in adj.get(u, []):
-            if not inMST[v] and wt < key[v]:
+        for v, wt in adj[u]:
+
+            if not visited[v] and wt < key[v]:
                 key[v] = wt
                 parent[v] = u
                 heapq.heappush(pq, (wt, v))
@@ -83,39 +98,89 @@ def prim(n, adj, start=0):
     return mst, cost
 
 
-# --- Graph Definition ---
-n = 7
+# -------------------------------
+# Streamlit UI
+# -------------------------------
+st.set_page_config(
+    page_title="Minimum Spanning Tree Visualizer",
+    page_icon="🌳",
+    layout="wide"
+)
 
-edges = [
-    (7, 0, 1),
-    (5, 0, 3),
-    (8, 1, 2),
-    (9, 1, 3),
-    (7, 1, 4),
-    (5, 2, 4),
-    (15, 3, 4),
-    (6, 3, 5),
-    (8, 4, 5),
-    (9, 4, 6),
-    (11, 5, 6)
-]
+st.title("🌳 Minimum Spanning Tree")
+st.subheader("Kruskal's Algorithm & Prim's Algorithm")
 
-adj = {}
+st.markdown("Enter graph edges below.")
 
-for w, u, v in edges:
-    adj.setdefault(u, []).append((v, w))
-    adj.setdefault(v, []).append((u, w))
+n = st.number_input(
+    "Number of Vertices",
+    min_value=2,
+    value=7
+)
 
-# Run Algorithms
-k_mst, k_cost = kruskal(n, edges[:])
-p_mst, p_cost = prim(n, adj)
+edge_text = st.text_area(
+    "Edges (Format: source destination weight)",
+    value="""0 1 7
+0 3 5
+1 2 8
+1 3 9
+1 4 7
+2 4 5
+3 4 15
+3 5 6
+4 5 8
+4 6 9
+5 6 11""",
+    height=220
+)
 
-print("=== Kruskal's MST ===")
-for u, v, w in k_mst:
-    print(f"Edge ({u} - {v}) Weight: {w}")
-print(f"Total MST Cost: {k_cost}")
+if st.button("Run Algorithms"):
 
-print("\n=== Prim's MST ===")
-for u, v, w in p_mst:
-    print(f"Edge ({u} - {v}) Weight: {w}")
-print(f"Total MST Cost: {p_cost}")
+    edges = []
+    adj = {i: [] for i in range(n)}
+
+    try:
+
+        for line in edge_text.strip().split("\n"):
+
+            u, v, w = map(int, line.split())
+
+            edges.append((w, u, v))
+
+            adj[u].append((v, w))
+            adj[v].append((u, w))
+
+        kruskal_mst, kruskal_cost = kruskal(n, edges.copy())
+        prim_mst, prim_cost = prim(n, adj)
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+
+            st.success("Kruskal's Algorithm")
+
+            st.table(
+                {
+                    "Edge": [f"{u} - {v}" for u, v, w in kruskal_mst],
+                    "Weight": [w for u, v, w in kruskal_mst],
+                }
+            )
+
+            st.metric("Total Cost", kruskal_cost)
+
+        with col2:
+
+            st.success("Prim's Algorithm")
+
+            st.table(
+                {
+                    "Edge": [f"{u} - {v}" for u, v, w in prim_mst],
+                    "Weight": [w for u, v, w in prim_mst],
+                }
+            )
+
+            st.metric("Total Cost", prim_cost)
+
+    except Exception as e:
+
+        st.error(f"Invalid Input\n\n{e}")
