@@ -1,6 +1,7 @@
 import streamlit as st
 import random
 
+global comparison_count
 comparison_count = 0
 
 
