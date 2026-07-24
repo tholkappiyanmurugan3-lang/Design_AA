@@ -1,5 +1,17 @@
+import streamlit as st
+import math
+
+st.set_page_config(
+    page_title="Bin Packing Visualizer",
+    page_icon="📦",
+    layout="wide"
+)
+
+
+# ---------------- Algorithms ---------------- #
+
 def first_fit(items, capacity=1.0):
-    bins = []  # Each bin stores remaining space
+    bins = []
     bin_contents = []
 
     for item in items:
@@ -24,14 +36,15 @@ def first_fit_decreasing(items, capacity=1.0):
 
 
 def best_fit_decreasing(items, capacity=1.0):
-    sorted_items = sorted(items, reverse=True)
+    items = sorted(items, reverse=True)
 
     bins = []
     bin_contents = []
 
-    for item in sorted_items:
+    for item in items:
+
         best_idx = -1
-        best_space = float('inf')
+        best_space = float("inf")
 
         for i, space in enumerate(bins):
             if space >= item and (space - item) < best_space:
@@ -48,40 +61,70 @@ def best_fit_decreasing(items, capacity=1.0):
     return bin_contents
 
 
-def display_bins(label, bins):
-    print(f"\n{label}: {len(bins)} bins")
+# ---------------- UI ---------------- #
 
-    for i, b in enumerate(bins, 1):
-        used = sum(b)
-        bar = "#" * int(used * 20)
-        print(f" Bin {i}: {[round(x,1) for x in b]} | Used: {used:.1f} [{bar:<20}]")
+st.title("📦 Bin Packing Algorithm Visualizer")
 
+st.write("Compare **First Fit**, **First Fit Decreasing**, and **Best Fit Decreasing**.")
 
-# ---------------- Main Program ----------------
-
-items = [0.5, 0.7, 0.3, 0.9, 0.2, 0.6, 0.8, 0.4, 0.1, 0.5]
-capacity = 1.0
-
-# Lower bound = ceil(total size / capacity)
-import math
-lower_bound = math.ceil(sum(items) / capacity)
-
-print(f"Items: {items}")
-print(f"Capacity: {capacity}")
-print(f"Sum of items: {sum(items)}")
-print(f"Lower bound on bins: {lower_bound}")
-
-ff_bins = first_fit(items, capacity)
-ffd_bins = first_fit_decreasing(items, capacity)
-bfd_bins = best_fit_decreasing(items, capacity)
-
-display_bins("First Fit (FF)", ff_bins)
-display_bins("First Fit Decreasing (FFD)", ffd_bins)
-display_bins("Best Fit Decreasing (BFD)", bfd_bins)
-
-print(
-    f"\nSummary: Lower Bound={lower_bound}, "
-    f"FF={len(ff_bins)}, "
-    f"FFD={len(ffd_bins)}, "
-    f"BFD={len(bfd_bins)}"
+capacity = st.number_input(
+    "Bin Capacity",
+    min_value=0.5,
+    value=1.0,
+    step=0.1
 )
+
+default_items = "0.5,0.7,0.3,0.9,0.2,0.6,0.8,0.4,0.1,0.5"
+
+text = st.text_input(
+    "Enter item sizes (comma separated)",
+    default_items
+)
+
+try:
+    items = [float(x.strip()) for x in text.split(",")]
+
+    if st.button("Run Algorithms"):
+
+        lower_bound = math.ceil(sum(items) / capacity)
+
+        ff = first_fit(items, capacity)
+        ffd = first_fit_decreasing(items, capacity)
+        bfd = best_fit_decreasing(items, capacity)
+
+        st.subheader("Summary")
+
+        c1, c2, c3, c4 = st.columns(4)
+
+        c1.metric("Lower Bound", lower_bound)
+        c2.metric("FF", len(ff))
+        c3.metric("FFD", len(ffd))
+        c4.metric("BFD", len(bfd))
+
+        def show_bins(title, bins):
+
+            st.subheader(title)
+
+            for i, b in enumerate(bins, start=1):
+
+                used = sum(b)
+
+                st.write(
+                    f"**Bin {i}** : {b} | Used = {used:.2f}"
+                )
+
+                st.progress(min(used / capacity, 1.0))
+
+        col1, col2, col3 = st.columns(3)
+
+        with col1:
+            show_bins("First Fit", ff)
+
+        with col2:
+            show_bins("First Fit Decreasing", ffd)
+
+        with col3:
+            show_bins("Best Fit Decreasing", bfd)
+
+except:
+    st.error("Please enter valid numbers separated by commas.")
