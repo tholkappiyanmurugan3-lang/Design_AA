@@ -1,3 +1,6 @@
+import streamlit as st
+
+
 def is_safe(board, row, col):
     for i in range(row):
         # Same column
@@ -32,26 +35,84 @@ def solve_n_queens(n):
     return solutions, backtrack_count[0]
 
 
-def display_board(solution, n):
-    print("  +" + "---+" * n)
+def board_to_html(solution, n):
+    html = """
+    <table style="border-collapse: collapse;">
+    """
+
     for row in range(n):
-        print("  |", end="")
+        html += "<tr>"
         for col in range(n):
+            color = "#F0D9B5" if (row + col) % 2 == 0 else "#B58863"
+
             if solution[row] == col:
-                print(" Q |", end="")
+                cell = "♛"
             else:
-                print("   |", end="")
-        print()
-        print("  +" + "---+" * n)
+                cell = ""
+
+            html += f"""
+            <td style="
+                width:45px;
+                height:45px;
+                text-align:center;
+                font-size:28px;
+                border:1px solid black;
+                background:{color};
+            ">
+            {cell}
+            </td>
+            """
+        html += "</tr>"
+
+    html += "</table>"
+    return html
 
 
-for n in [4, 6, 8]:
-    print(f"\nSolving {n}-Queens Problem:")
-    solutions, backtrack_count = solve_n_queens(n)
+# ---------------- Streamlit UI ----------------
 
-    print(f"Number of solutions: {len(solutions)}")
-    print(f"Number of backtracking steps: {backtrack_count}")
+st.set_page_config(
+    page_title="N-Queens Solver",
+    page_icon="♛",
+    layout="wide"
+)
 
-    for index, solution in enumerate(solutions):
-        print(f"\nSolution {index + 1}:")
-        display_board(solution, n)
+st.title("♛ N-Queens Problem Solver")
+st.write("Solve the N-Queens problem using Backtracking.")
+
+n = st.slider(
+    "Select Number of Queens",
+    min_value=4,
+    max_value=10,
+    value=8
+)
+
+if st.button("Solve"):
+    with st.spinner("Finding all solutions..."):
+
+        solutions, backtrack_count = solve_n_queens(n)
+
+    st.success("Completed!")
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.metric("Solutions", len(solutions))
+
+    with col2:
+        st.metric("Backtracking Steps", backtrack_count)
+
+    st.divider()
+
+    show = st.number_input(
+        "Show first N solutions",
+        min_value=1,
+        max_value=len(solutions),
+        value=min(5, len(solutions))
+    )
+
+    for i in range(show):
+        st.subheader(f"Solution {i+1}")
+        st.markdown(
+            board_to_html(solutions[i], n),
+            unsafe_allow_html=True
+        )
